@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>F1 Visual Pro: Debug Mode</title>
+    <style>
+        body { background-color: #1a1a1a; color: white; font-family: sans-serif; text-align: center; margin: 0; padding: 20px; }
+        #status { color: #ff1801; margin-bottom: 10px; font-weight: bold; }
+        canvas { border: 2px solid #444; background-color: #000; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <h1>F1 Visual Project</h1>
+    <div id="status">Checking connection to F1 servers...</div>
+    <canvas id="trackCanvas" width="800" height="600"></canvas>
+
+    <script>
+async function start() {
+    try {
+        statusDiv.innerText = "Connecting to F1 Server...";
+        
+        // Added 'mode: cors' to tell the browser we are being intentional
+        const response = await fetch(`https://api.openf1.org/v1/location?session_key=9473&date>=2024-03-02T15:05:00&date<2024-03-02T15:05:05`, {
+            method: 'GET',
+            mode: 'cors' 
+        });
+
+        if (!response.ok) throw new Error("Server is busy");
+
+        const data = await response.json();
+        statusDiv.innerText = `Connected! Found ${data.length} cars.`;
+        
+        // ... (rest of your drawing code)
+    } catch (error) {
+        statusDiv.innerText = "Still blocked. Try opening through a 'Live Server' or GitHub Pages.";
+        console.error("The Error is:", error);
+    }
+}
+        const canvas = document.getElementById('trackCanvas');
+        const ctx = canvas.getContext('2d');
+        const statusDiv = document.getElementById('status');
+
+        // FIXED TEST DATA (Bahrain 2024 - Lap 1)
+        const sessionKey = "9473";
+        const testTime = "2024-03-02T15:05:00"; 
+
+        async function start() {
+            try {
+                statusDiv.innerText = "Attempting to fetch data...";
+                
+                // 1. Test if we can see the API
+                const response = await fetch(`https://api.openf1.org/v1/location?session_key=${sessionKey}&date>=${testTime}&date<2024-03-02T15:05:05`);
+                const data = await response.json();
+
+                if (data.length === 0) {
+                    statusDiv.innerText = "API connected, but no cars found at this time.";
+                    return;
+                }
+
+                statusDiv.innerText = `Success! Found ${data.length} data points. Drawing...`;
+
+                // 2. Draw what we found
+                // We use the first car's X and Y to center the map
+                const center = data[0];
+                const zoom = 0.05;
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                data.forEach(car => {
+                    const x = (car.x - center.x) * zoom + 400;
+                    const y = (center.y - car.y) * zoom + 300;
+
+                    ctx.beginPath();
+                    ctx.arc(x, y, 5, 0, Math.PI * 2);
+                    ctx.fillStyle = "#ff1801";
+                    ctx.fill();
+                });
+
+            } catch (error) {
+                statusDiv.innerText = "Error: Could not reach OpenF1 API. Check your internet.";
+                console.error(error);
+            }
+        }
+
+        start();
+    </script>
+</body>
+</html>
