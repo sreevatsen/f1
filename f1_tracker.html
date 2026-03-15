@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>F1 LIVE TRACKER 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #e10600;
+    --bg: #0a0a0b;
+    --bg2: #111114;
+    --bg3: #1a1a1f;
+    --border: #2a2a32;
+    --text: #f0f0f0;
+    --muted: #555;
+    --gold: #f5c842;
+    --green: #39d353;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Barlow Condensed', sans-serif;
+    height: 100vh;
+    overflow: hidden;
+    display: grid;
+    grid-template-rows: 52px 1fr 32px;
+    grid-template-columns: 1fr 310px;
+  }
+
+  /* HEADER */
+  header {
+    grid-column: 1 / -1;
+    background: #000;
+    border-bottom: 2px solid var(--red);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 16px;
+  }
+  .logo { font-size: 20px; font-weight: 900; letter-spacing: 3px; color: var(--red); white-space: nowrap; }
+  .logo em { color: var(--text); font-style: normal; }
+  .hm { flex: 1; display: flex; align-items: center; gap: 20px; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+  #h-session { font-size: 13px; font-weight: 700; color: var(--text); letter-spacing: 2px; }
+  #h-lap { color: var(--muted); }
+  .pill { padding: 2px 8px; border-radius: 2px; font-size: 10px; font-weight: 700; letter-spacing: 1.5px; }
+  .pill-live { background: var(--red); animation: blink 1.4s ease-in-out infinite; }
+  .pill-test { background: #333; color: #999; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .hbtns { display: flex; gap: 8px; }
+  .btn {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px; font-weight: 700;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    padding: 6px 16px; border: none; border-radius: 2px;
+    cursor: pointer; transition: opacity .15s;
+  }
+  .btn:hover { opacity: .8; }
+  .btn-red { background: var(--red); color: #fff; }
+  .btn-dark { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
+
+  /* TRACK */
+  #track-area { position: relative; overflow: hidden; }
+  canvas { width: 100%; height: 100%; display: block; background: var(--bg); }
+  .tov { position: absolute; top: 12px; left: 12px; display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
+  .tov-card {
+    background: rgba(0,0,0,.8); border: 1px solid var(--border);
+    padding: 5px 10px; font-family: 'JetBrains Mono', monospace;
+  }
+  .tov-card small { display: block; font-size: 9px; color: var(--muted); letter-spacing: 1px; margin-bottom: 1px; }
+  .tov-card b { font-size: 16px; }
+  #follow-badge {
+    position: absolute; bottom: 12px; left: 12px;
+    background: rgba(0,0,0,.85); border: 1px solid var(--border);
+    padding: 6px 12px; font-size: 12px; display: none;
+    align-items: center; gap: 8px; font-family: 'JetBrains Mono', monospace;
+  }
+  #follow-badge .fdot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  #follow-badge .fclose { cursor: pointer; color: var(--muted); margin-left: 6px; font-size: 10px; }
+  #follow-badge .fclose:hover { color: var(--red); }
+
+  /* SIDEBAR */
+  #sidebar { background: var(--bg2); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  .stabs { display: flex; border-bottom: 1px solid var(--border); }
+  .stab {
+    flex: 1; padding: 9px 4px; text-align: center;
+    font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+    cursor: pointer; color: var(--muted);
+    border-bottom: 2px solid transparent; transition: all .12s;
+  }
+  .stab:hover { color: var(--text); }
+  .stab.on { color: var(--text); border-bottom-color: var(--red); }
+  .spanel { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+  .spanel.on { display: flex; }
+
+  /* LEADERBOARD */
+  #lb-list { overflow-y: auto; flex: 1; padding: 3px; }
+  .drow {
+    display: grid;
+    grid-template-columns: 26px 36px 1fr 72px;
+    align-items: center;
+    padding: 6px 6px;
+    margin-bottom: 2px;
+    background: var(--bg3);
+    border-left: 3px solid transparent;
+    cursor: pointer;
+    border-radius: 1px;
+    transition: background .1s;
+  }
+  .drow:hover { background: #1e1e24; }
+  .drow.picked { background: #1e1e24; border-left-color: var(--red); }
+  .dpos { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; text-align: center; color: var(--muted); }
+  .dpos.g { color: var(--gold); }
+  .dpos.s { color: #ccc; }
+  .dpos.b { color: #cd7f32; }
+  .dbadge { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; padding: 2px 4px; border-radius: 2px; text-align: center; margin: 0 3px; }
+  .dinfo { min-width: 0; }
+  .dname { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dteam { font-size: 9px; color: var(--muted); }
+  .dgap { text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); }
+  .dgap strong { display: block; font-size: 11px; color: var(--text); }
+
+  /* TIMING / INTERVALS */
+  .scroll-area { overflow-y: auto; flex: 1; padding: 6px; font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+  .sec-hdr { font-size: 9px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; padding: 8px 6px 3px; border-bottom: 1px solid var(--border); margin-bottom: 3px; }
+  .trow { display: flex; justify-content: space-between; align-items: center; padding: 5px 6px; border-bottom: 1px solid #1a1a1f; }
+  .trow:last-child { border: none; }
+  .tlabel { color: var(--muted); }
+  .tval { font-weight: 700; }
+  .tval.grn { color: var(--green); }
+  .tval.yel { color: var(--gold); }
+  .tval.red { color: var(--red); }
+
+  /* STATUS BAR */
+  #statusbar {
+    grid-column: 1 / -1; background: #000;
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 14px; gap: 18px;
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted);
+  }
+  #sb-msg { flex: 1; }
+  .sb-ok { color: var(--green); }
+  .sb-err { color: var(--red); }
+  .sb-warn { color: var(--gold); }
+
+  /* Empty state */
+  .empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--muted); font-size: 12px; text-align: center; padding: 20px; }
+  .empty-icon { font-size: 32px; opacity: .25; }
+
+  ::-webkit-scrollbar { width: 3px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">F1<em>·</em>LIVE</div>
+  <div class="hm">
+    <span id="h-session">AWAITING SESSION</span>
+    <span id="h-pill" class="pill pill-test" style="display:none">TEST</span>
+    <span id="h-lap" style="display:none">LAP <b id="h-lapnum">--</b></span>
+  </div>
+  <div class="hbtns">
+    <button class="btn btn-dark" onclick="startTest()">🇦🇺 AUS 2026 Test</button>
+    <button class="btn btn-red" onclick="startLive()">🔴 Go Live</button>
+  </div>
+</header>
+
+<!-- TRACK CANVAS -->
+<div id="track-area">
+  <canvas id="c"></canvas>
+  <div class="tov">
+    <div class="tov-card"><small>LEADER</small><b id="ov-leader">—</b></div>
+    <div class="tov-card"><small>SESSION TIME</small><b id="ov-time">00:00:00</b></div>
+  </div>
+  <div id="follow-badge">
+    <div class="fdot" id="fb-dot"></div>
+    <span id="fb-name">—</span>
+    <span class="fclose" onclick="clearFollow()">✕</span>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+  <div class="stabs">
+    <div class="stab on"  onclick="switchTab('lb',this)">Leaderboard</div>
+    <div class="stab"     onclick="switchTab('tm',this)">Timing</div>
+    <div class="stab"     onclick="switchTab('iv',this)">Intervals</div>
+  </div>
+  <div class="spanel on" id="sp-lb">
+    <div id="lb-list">
+      <div class="empty"><div class="empty-icon">🏎</div>Press a button above to begin</div>
+    </div>
+  </div>
+  <div class="spanel" id="sp-tm">
+    <div class="scroll-area" id="tm-body">
+      <div class="empty"><div class="empty-icon">⏱</div>Click a driver to see timing</div>
+    </div>
+  </div>
+  <div class="spanel" id="sp-iv">
+    <div class="scroll-area" id="iv-body">
+      <div class="empty"><div class="empty-icon">📊</div>Awaiting data…</div>
+    </div>
+  </div>
+</div>
+
+<!-- STATUS BAR -->
+<div id="statusbar">
+  <span id="sb-msg">System ready.</span>
+  <span id="sb-src">API: —</span>
+  <span id="sb-drv">DRIVERS: 0</span>
+  <span id="sb-clock">00:00:00</span>
+</div>
+
+<script>
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// CANVAS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  const el = document.getElementById('track-area');
+  canvas.width = el.clientWidth;
+  canvas.height = el.clientHeight;
+  draw();
+}
+window.addEventListener('resize', resizeCanvas);
+requestAnimationFrame(resizeCanvas);
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// STATE
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const S = {
+  sessionKey: null,
+  isLive: false,
+  drivers: {},    // string key → driver obj
+  trackPts: [],
+  order: [],      // string keys sorted by position
+  follow: null,   // string key
+  lapCurrent: null,
+  lapTotal: null,
+  updateTimer: null,
+  clockTimer: null,
+  clockStart: null,
+};
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// UTILS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function setStatus(msg, type) {
+  const el = document.getElementById('sb-msg');
+  el.textContent = msg;
+  el.className = type === 'err' ? 'sb-err' : type === 'warn' ? 'sb-warn' : 'sb-ok';
+}
+
+function fmtMs(ms) {
+  if (ms == null || ms === 0) return '—';
+  const m = Math.floor(ms / 60000);
+  const s = ((ms % 60000) / 1000).toFixed(3);
+  return m + ':' + String(s).padStart(6,'0');
+}
+
+function pad2(n) { return String(n).padStart(2,'0'); }
+
+function contrastColor(hex) {
+  if (!hex || hex.length < 7) return '#fff';
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return (0.299*r + 0.587*g + 0.114*b) > 140 ? '#000' : '#fff';
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// TABS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function switchTab(name, el) {
+  document.querySelectorAll('.stab').forEach(t => t.classList.remove('on'));
+  document.querySelectorAll('.spanel').forEach(p => p.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById('sp-' + name).classList.add('on');
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// API — returns array or null
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async function api(endpoint) {
+  try {
+    const r = await fetch('https://api.openf1.org/v1/' + endpoint);
+    if (!r.ok) {
+      setStatus('HTTP ' + r.status + ' from /' + endpoint.split('?')[0], 'warn');
+      return null;
+    }
+    const data = await r.json();
+    return Array.isArray(data) ? data : null;
+  } catch(e) {
+    setStatus('Network blocked. Open this file via a web server or GitHub Pages.', 'err');
+    return null;
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SESSION SETUP
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async function setupSession(sessionKey, isLive, label) {
+  clearInterval(S.updateTimer);
+  clearInterval(S.clockTimer);
+
+  S.sessionKey = sessionKey;
+  S.isLive = isLive;
+  S.drivers = {};
+  S.trackPts = [];
+  S.order = [];
+  S.follow = null;
+  S.lapCurrent = null;
+  S.clockStart = Date.now();
+  clearFollow();
+
+  // Header UI
+  document.getElementById('h-session').textContent = label.toUpperCase();
+  const pill = document.getElementById('h-pill');
+  pill.style.display = 'inline';
+  pill.textContent = isLive ? 'LIVE' : 'TEST';
+  pill.className = 'pill ' + (isLive ? 'pill-live' : 'pill-test');
+  document.getElementById('h-lap').style.display = 'inline';
+
+  setStatus('Loading drivers…', 'ok');
+
+  // ── 1. Drivers ──
+  const driverData = await api('drivers?session_key=' + sessionKey);
+  if (!driverData || driverData.length === 0) {
+    setStatus('No driver data for session ' + sessionKey + '. Session may lack telemetry.', 'err');
+    return;
+  }
+  driverData.forEach(d => {
+    const key = String(d.driver_number);
+    S.drivers[key] = {
+      key,
+      name: d.last_name || ('Car ' + key),
+      short: d.name_acronym || (d.last_name||'UNK').substring(0,3).toUpperCase(),
+      team: d.team_name || '—',
+      color: d.team_colour ? '#' + String(d.team_colour).replace('#','') : '#ffffff',
+      x: 0, y: 0,
+      lap: null, lastLapMs: null, gap: null, interval: null, pos: null
+    };
+  });
+  S.order = Object.keys(S.drivers);
+  document.getElementById('sb-drv').textContent = 'DRIVERS: ' + S.order.length;
+  document.getElementById('sb-src').textContent = 'API: OPENF1';
+
+  // ── 2. Track outline (fetch all location for one driver, downsample) ──
+  setStatus('Fetching track outline…', 'ok');
+  const refKey = Object.keys(S.drivers)[0];
+  const trackRaw = await api('location?session_key=' + sessionKey + '&driver_number=' + refKey);
+  if (trackRaw && trackRaw.length > 10) {
+    const step = Math.max(1, Math.floor(trackRaw.length / 500));
+    S.trackPts = trackRaw
+      .filter((_,i) => i % step === 0)
+      .map(p => ({ x: p.x, y: p.y }))
+      .filter(p => p.x != null && p.y != null);
+  }
+  setStatus('Session loaded: ' + driverData.length + ' drivers | ' + S.trackPts.length + ' track pts', 'ok');
+
+  // ── 3. Clock + update loop ──
+  S.clockTimer = setInterval(tickClock, 1000);
+  S.updateTimer = setInterval(updateCycle, isLive ? 2000 : 5000);
+  updateCycle(); // immediate first call
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// CLOCK
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function tickClock() {
+  if (!S.clockStart) return;
+  const e = Math.floor((Date.now() - S.clockStart) / 1000);
+  const str = pad2(Math.floor(e/3600)) + ':' + pad2(Math.floor((e%3600)/60)) + ':' + pad2(e%60);
+  document.getElementById('ov-time').textContent = str;
+  document.getElementById('sb-clock').textContent = str;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// UPDATE CYCLE
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async function updateCycle() {
+  if (!S.sessionKey) return;
+  const key = S.sessionKey;
+
+  // Fetch all three in parallel — no date filters; API returns latest data
+  const [locs, intervals, laps] = await Promise.all([
+    api('location?session_key=' + key),
+    api('intervals?session_key=' + key),
+    api('laps?session_key=' + key),
+  ]);
+
+  // ── Locations: keep latest per driver ──
+  if (locs && locs.length > 0) {
+    const latest = {};
+    for (const e of locs) latest[String(e.driver_number)] = e;
+    for (const [dKey, e] of Object.entries(latest)) {
+      if (S.drivers[dKey] && e.x != null && e.y != null) {
+        S.drivers[dKey].x = e.x;
+        S.drivers[dKey].y = e.y;
+      }
+    }
+  }
+
+  // ── Intervals: keep latest per driver, build order ──
+  if (intervals && intervals.length > 0) {
+    const latest = {};
+    for (const e of intervals) latest[String(e.driver_number)] = e;
+    for (const [dKey, e] of Object.entries(latest)) {
+      if (S.drivers[dKey]) {
+        S.drivers[dKey].gap = e.gap_to_leader;
+        S.drivers[dKey].interval = e.interval;
+        S.drivers[dKey].pos = e.position;
+      }
+    }
+    // Build sorted order
+    const withPos = Object.values(S.drivers)
+      .filter(d => d.pos != null)
+      .sort((a,b) => Number(a.pos) - Number(b.pos))
+      .map(d => d.key);
+    const withoutPos = Object.keys(S.drivers).filter(k => !withPos.includes(k));
+    S.order = [...withPos, ...withoutPos];
+  }
+
+  // ── Laps: keep latest per driver ──
+  if (laps && laps.length > 0) {
+    const latest = {};
+    for (const e of laps) latest[String(e.driver_number)] = e;
+    let maxLap = 0;
+    for (const [dKey, e] of Object.entries(latest)) {
+      if (S.drivers[dKey]) {
+        S.drivers[dKey].lap = e.lap_number;
+        if (e.lap_duration) S.drivers[dKey].lastLapMs = Math.round(e.lap_duration * 1000);
+        if ((e.lap_number || 0) > maxLap) maxLap = e.lap_number;
+      }
+    }
+    if (maxLap > 0) {
+      S.lapCurrent = maxLap;
+      document.getElementById('h-lapnum').textContent =
+        maxLap + (S.lapTotal ? '/' + S.lapTotal : '');
+    }
+  }
+
+  // ── Leader ──
+  if (S.order.length > 0) {
+    const leader = S.drivers[S.order[0]];
+    if (leader) document.getElementById('ov-leader').textContent = leader.short;
+  }
+
+  renderLeaderboard();
+  renderIntervals();
+  renderTiming();
+  draw();
+  setStatus('Updated ' + new Date().toLocaleTimeString(), 'ok');
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// LEADERBOARD
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function renderLeaderboard() {
+  const list = document.getElementById('lb-list');
+  if (S.order.length === 0) return;
+  list.innerHTML = '';
+  S.order.forEach((k, idx) => {
+    const d = S.drivers[k];
+    if (!d) return;
+    const pos = idx + 1;
+    const gapStr = pos === 1 ? 'LEADER' : (d.gap != null ? '+' + Number(d.gap).toFixed(3) : '—');
+    const lapStr = fmtMs(d.lastLapMs);
+    const posClass = pos===1?'g':pos===2?'s':pos===3?'b':'';
+    const txtColor = contrastColor(d.color);
+
+    const row = document.createElement('div');
+    row.className = 'drow' + (S.follow === k ? ' picked' : '');
+    row.innerHTML =
+      '<div class="dpos ' + posClass + '">' + pos + '</div>' +
+      '<div class="dbadge" style="background:' + d.color + ';color:' + txtColor + '">' + d.short + '</div>' +
+      '<div class="dinfo">' +
+        '<div class="dname">' + d.name + '</div>' +
+        '<div class="dteam">' + d.team + '</div>' +
+      '</div>' +
+      '<div class="dgap">' +
+        '<strong style="color:' + (pos===1?'var(--gold)':'var(--text)') + '">' + gapStr + '</strong>' +
+        lapStr +
+      '</div>';
+    row.addEventListener('click', () => followDriver(k));
+    list.appendChild(row);
+  });
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// INTERVALS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function renderIntervals() {
+  const body = document.getElementById('iv-body');
+  if (S.order.length === 0) return;
+  body.innerHTML = '<div class="sec-hdr">GAP TO LEADER · INTERVAL</div>';
+  S.order.forEach((k, idx) => {
+    const d = S.drivers[k];
+    if (!d) return;
+    const pos = idx + 1;
+    const gap = pos===1 ? 'LEADER' : (d.gap != null ? '+' + Number(d.gap).toFixed(3) : '—');
+    const intv = pos===1 ? '' : (d.interval != null ? '+' + Number(d.interval).toFixed(3) : '—');
+    const row = document.createElement('div');
+    row.className = 'trow';
+    row.innerHTML =
+      '<span class="tlabel" style="display:flex;align-items:center;gap:5px">' +
+        '<span style="font-size:9px;color:var(--muted);width:14px">' + pos + '</span>' +
+        '<span style="width:7px;height:7px;border-radius:50%;background:' + d.color + ';flex-shrink:0"></span>' +
+        d.short +
+      '</span>' +
+      '<span style="text-align:right">' +
+        '<span class="tval ' + (pos===1?'grn':'') + '">' + gap + '</span>' +
+        '<span style="display:block;font-size:9px;color:var(--muted)">' + intv + '</span>' +
+      '</span>';
+    body.appendChild(row);
+  });
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// TIMING PANEL
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function renderTiming() {
+  const body = document.getElementById('tm-body');
+  if (!S.follow) return;
+  const d = S.drivers[S.follow];
+  if (!d) return;
+  const pos = S.order.indexOf(S.follow) + 1;
+  body.innerHTML =
+    '<div class="sec-hdr">DRIVER · ' + d.short + '</div>' +
+    tr('DRIVER', d.name) +
+    tr('TEAM', d.team) +
+    tr('POSITION', pos > 0 ? 'P'+pos : '—', pos===1?'grn':'') +
+    tr('GAP TO LEADER', pos===1?'LEADER':(d.gap!=null?'+'+Number(d.gap).toFixed(3):'—'), pos===1?'grn':'') +
+    tr('INTERVAL', d.interval!=null?'+'+Number(d.interval).toFixed(3):'—') +
+    '<div class="sec-hdr">LAPS</div>' +
+    tr('LAST LAP', fmtMs(d.lastLapMs), 'grn') +
+    tr('LAP NO.', d.lap || '—') +
+    '<div class="sec-hdr">GPS</div>' +
+    tr('X', d.x !== 0 ? Math.round(d.x) : '—') +
+    tr('Y', d.y !== 0 ? Math.round(d.y) : '—');
+}
+
+function tr(label, val, cls) {
+  return '<div class="trow"><span class="tlabel">' + label + '</span>' +
+         '<span class="tval ' + (cls||'') + '">' + val + '</span></div>';
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// FOLLOW
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function followDriver(k) {
+  S.follow = k;
+  const d = S.drivers[k];
+  if (!d) return;
+  const badge = document.getElementById('follow-badge');
+  badge.style.display = 'flex';
+  document.getElementById('fb-dot').style.background = d.color;
+  document.getElementById('fb-name').textContent = d.name + ' #' + k;
+  renderLeaderboard();
+  renderTiming();
+  document.querySelectorAll('.stab')[1].click();
+}
+
+function clearFollow() {
+  S.follow = null;
+  document.getElementById('follow-badge').style.display = 'none';
+  renderLeaderboard();
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// DRAW
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function getCamAndZoom() {
+  const W = canvas.width, H = canvas.height;
+  if (S.follow && S.drivers[S.follow] && S.drivers[S.follow].x !== 0) {
+    const d = S.drivers[S.follow];
+    return { cx: d.x, cy: d.y, zoom: 0.1 };
+  }
+  const active = Object.values(S.drivers).filter(d => d.x !== 0);
+  if (active.length === 0) return { cx: 0, cy: 0, zoom: 0.05 };
+  const xs = active.map(d => d.x), ys = active.map(d => d.y);
+  const cx = (Math.min(...xs)+Math.max(...xs))/2;
+  const cy = (Math.min(...ys)+Math.max(...ys))/2;
+  const spread = Math.max(Math.max(...xs)-Math.min(...xs), Math.max(...ys)-Math.min(...ys)) || 1;
+  const zoom = Math.min(0.18, Math.max(0.004, Math.min(W,H)*0.72/spread));
+  return { cx, cy, zoom };
+}
+
+function draw() {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+
+  // Grid
+  ctx.strokeStyle = '#10101a';
+  ctx.lineWidth = 1;
+  for (let x=0;x<W;x+=60){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for (let y=0;y<H;y+=60){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+  const {cx,cy,zoom} = getCamAndZoom();
+  const sx = wx => (wx-cx)*zoom + W/2;
+  const sy = wy => (cy-wy)*zoom + H/2;
+
+  // Track
+  if (S.trackPts.length > 2) {
+    // Shadow
+    ctx.beginPath();
+    ctx.strokeStyle = '#16162a'; ctx.lineWidth = 20;
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    S.trackPts.forEach((p,i) => i===0?ctx.moveTo(sx(p.x),sy(p.y)):ctx.lineTo(sx(p.x),sy(p.y)));
+    ctx.stroke();
+    // Surface
+    ctx.beginPath();
+    ctx.strokeStyle = '#252530'; ctx.lineWidth = 11;
+    S.trackPts.forEach((p,i) => i===0?ctx.moveTo(sx(p.x),sy(p.y)):ctx.lineTo(sx(p.x),sy(p.y)));
+    ctx.stroke();
+    // Edge
+    ctx.beginPath();
+    ctx.strokeStyle = '#38384a'; ctx.lineWidth = 1;
+    S.trackPts.forEach((p,i) => i===0?ctx.moveTo(sx(p.x),sy(p.y)):ctx.lineTo(sx(p.x),sy(p.y)));
+    ctx.stroke();
+  }
+
+  // Drivers
+  S.order.forEach((k, posIdx) => {
+    const d = S.drivers[k];
+    if (!d || d.x === 0) return;
+    const x = sx(d.x), y = sy(d.y);
+    const isF = S.follow === k;
+    const r = isF ? 9 : 5;
+
+    if (isF) { ctx.shadowBlur = 18; ctx.shadowColor = d.color; }
+
+    // Dot
+    ctx.fillStyle = d.color;
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+
+    // Inner ring for non-followed
+    if (!isF) {
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.beginPath(); ctx.arc(x,y,r-1.5,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = d.color;
+      ctx.beginPath(); ctx.arc(x,y,r-2.5,0,Math.PI*2); ctx.fill();
+    }
+
+    ctx.shadowBlur = 0;
+
+    // P1/P2/P3 ring
+    if (posIdx < 3) {
+      ctx.strokeStyle = posIdx===0?'#f5c842':posIdx===1?'#cccccc':'#cd7f32';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(x,y,r+3.5,0,Math.PI*2); ctx.stroke();
+    }
+
+    // Name label
+    const lblW = isF ? 36 : 28;
+    ctx.fillStyle = 'rgba(0,0,0,0.72)';
+    ctx.fillRect(x+r+2, y-8, lblW, 14);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold ' + (isF?11:9) + "px 'JetBrains Mono', monospace";
+    ctx.fillText(d.short, x+r+4, y+3);
+  });
+
+  // No data hint
+  const anyOn = Object.values(S.drivers).some(d => d.x !== 0);
+  if (S.sessionKey && !anyOn) {
+    ctx.fillStyle = '#333';
+    ctx.font = '14px Barlow Condensed, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No GPS position data for this session.', W/2, H/2 - 10);
+    ctx.font = '11px JetBrains Mono, monospace';
+    ctx.fillStyle = '#444';
+    ctx.fillText('Try a race session — practice/quali sometimes lacks location data.', W/2, H/2 + 12);
+    ctx.textAlign = 'left';
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// BUTTON ACTIONS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async function startLive() {
+  setStatus('Checking for live sessions…', 'ok');
+  const active = await api('sessions?is_active=true');
+  if (active && active.length > 0) {
+    const s = active[0];
+    S.lapTotal = s.total_laps || null;
+    await setupSession(String(s.session_key), true,
+      (s.session_name||'Race') + ' · ' + (s.country_name||''));
+    return;
+  }
+  setStatus('No live session. Loading most recent 2026…', 'warn');
+  const recent = await api('sessions?year=2026');
+  if (recent && recent.length > 0) {
+    const s = recent[recent.length-1];
+    S.lapTotal = s.total_laps || null;
+    await setupSession(String(s.session_key), false,
+      (s.session_name||'Session') + ' · ' + (s.country_name||'2026'));
+  } else {
+    setStatus('No 2026 sessions available. API may not have data yet.', 'err');
+  }
+}
+
+async function startTest() {
+  setStatus('Searching for Australia 2026…', 'ok');
+  // Fetch all Australian sessions in 2026
+  let sessions = await api('sessions?year=2026&country_name=Australia');
+  if (sessions && sessions.length > 0) {
+    // Prefer a race session
+    const race = sessions.find(s => (s.session_name||'').toLowerCase().includes('race'));
+    const s = race || sessions[sessions.length-1];
+    S.lapTotal = s.total_laps || null;
+    await setupSession(String(s.session_key), false,
+      'Australia 2026 · ' + (s.session_name||'Session'));
+    return;
+  }
+  // Fallback: latest 2026 session
+  setStatus('AUS 2026 not found, using latest 2026 session…', 'warn');
+  const latest = await api('sessions?year=2026');
+  if (latest && latest.length > 0) {
+    const s = latest[latest.length-1];
+    S.lapTotal = s.total_laps || null;
+    await setupSession(String(s.session_key), false,
+      (s.session_name||'Session') + ' · ' + (s.country_name||'2026'));
+  } else {
+    setStatus('No 2026 session data available yet from OpenF1.', 'err');
+  }
+}
+</script>
+</body>
+</html>
